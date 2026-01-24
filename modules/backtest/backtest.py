@@ -18,8 +18,8 @@ class BacktestConfig(TypedDict):
 
 
 class BacktestReport(TypedDict):
-    balance: float
     initial_balance: float
+    balance: float
     total_value: float
     roi: float
     years: float
@@ -54,8 +54,8 @@ class Backtest:
         rate = get_exchange_rate("USD", "KRW")
 
         return BacktestReport(
-            balance=self.trader.balance * rate,
             initial_balance=self.trader.initial_balance * rate,
+            balance=self.trader.balance * rate,
             total_value=self.trader.total_value() * rate,
             roi=self.trader.total_roi(),
             years=(actual_end - actual_start).days / 365,
