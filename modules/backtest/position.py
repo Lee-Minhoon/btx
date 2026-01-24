@@ -4,20 +4,23 @@ from modules.utils import roi
 
 class Position:
     ticker: Ticker
-    invested: float
     amount: float
     current_price: float
-    avg_price: float
+    avg_buy_price: float
     buy_count: int
     sell_count: int
+    realized_profit: float
     unrealized_profit: float
 
     def __init__(self, ticker: Ticker):
         self.ticker = ticker
-        self.invested = 0
+        self.initialize()
+        self.realized_profit = 0
+
+    def initialize(self):
         self.amount = 0
         self.current_price = 0
-        self.avg_price = 0
+        self.avg_buy_price = 0
         self.buy_count = 0
         self.sell_count = 0
         self.unrealized_profit = 0
@@ -26,10 +29,9 @@ class Position:
         if amount < 0 or price < 0:
             raise ValueError("Amount or price is negative")
         cost = price * amount
-        value = self.value() + cost
-        self.invested += cost
+        total_cost = self.total_cost() + cost
         self.amount += amount
-        self.avg_price = value / self.amount
+        self.avg_buy_price = total_cost / self.amount
         self.buy_count += 1
 
     def sell(self, amount: float):
@@ -37,19 +39,23 @@ class Position:
             raise ValueError("Amount is negative")
         if self.amount < amount:
             raise ValueError("Insufficient amount")
-        self.invested -= self.avg_price * amount
         self.amount -= amount
         self.sell_count += 1
-
-        realized_profit = (self.current_price - self.avg_price) * amount
+        realized_profit = (self.current_price - self.avg_buy_price) * amount
+        self.realized_profit += realized_profit
+        if self.amount == 0:
+            self.initialize()
         return realized_profit
 
     def update(self, price: float):
         self.current_price = price
-        self.unrealized_profit = (price - self.avg_price) * self.amount
+        self.unrealized_profit = (price - self.avg_buy_price) * self.amount
+
+    def total_cost(self):
+        return self.avg_buy_price * self.amount
 
     def value(self):
-        return self.avg_price * self.amount
+        return self.current_price * self.amount
 
     def roi(self):
-        return roi(self.invested, self.value())
+        return roi(self.total_cost(), self.value())

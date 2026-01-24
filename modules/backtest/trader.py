@@ -1,5 +1,5 @@
 from modules.data import Ticker
-from modules.utils import annual_roi, roi
+from modules.utils import annual_roi_from_roi, roi
 
 from .position import Position
 
@@ -20,6 +20,11 @@ class Trader:
     def _remove_position(self, ticker: Ticker):
         self.positions.pop(ticker)
 
+    def update(self, ticker: Ticker, price: float):
+        if ticker not in self.positions:
+            return
+        self.positions[ticker].update(price)
+
     def buy(self, ticker: Ticker, amount: float, price: float):
         if self.balance < price:
             raise ValueError("Insufficient balance")
@@ -38,14 +43,14 @@ class Trader:
         if self.positions[ticker].amount == 0:
             self._remove_position(ticker)
 
-    def stock_roi(self, ticker: Ticker):
-        return self.positions[ticker].roi()
+    def total_value(self):
+        return self.balance + sum(p.value() for p in self.positions.values())
 
     def total_roi(self):
-        return roi(self.initial_balance, self.balance)
+        return roi(self.initial_balance, self.total_value())
 
     def annual_roi(self, days: int):
-        return annual_roi(self.initial_balance, self.balance, days)
+        return annual_roi_from_roi(self.total_roi(), days)
 
     def buy_count(self):
         return sum(position.buy_count for position in self.positions.values())
