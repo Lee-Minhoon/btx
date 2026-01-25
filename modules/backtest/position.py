@@ -1,5 +1,15 @@
+from typing import TypedDict
+
 from modules.data import Ticker
 from modules.utils import roi
+
+
+class PositionReport(TypedDict):
+    value: float
+    roi: float
+    total_cost: float
+    buy_count: int
+    sell_count: int
 
 
 class Position:
@@ -14,15 +24,15 @@ class Position:
 
     def __init__(self, ticker: Ticker):
         self.ticker = ticker
-        self.initialize()
         self.realized_profit = 0
+        self.buy_count = 0
+        self.sell_count = 0
+        self.initialize()
 
     def initialize(self):
         self.amount = 0
         self.current_price = 0
         self.avg_buy_price = 0
-        self.buy_count = 0
-        self.sell_count = 0
         self.unrealized_profit = 0
 
     def buy(self, amount: float, price: float):
@@ -59,3 +69,12 @@ class Position:
 
     def roi(self):
         return roi(self.total_cost(), self.value())
+
+    def report(self):
+        return PositionReport(
+            value=self.value(),
+            total_cost=self.total_cost(),
+            roi=self.roi(),
+            buy_count=self.buy_count,
+            sell_count=self.sell_count,
+        )

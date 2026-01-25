@@ -14,11 +14,8 @@ class Trader:
         self.balance = balance
         self.positions = {}
 
-    def _add_position(self, ticker: Ticker):
+    def add_position(self, ticker: Ticker):
         self.positions[ticker] = Position(ticker)
-
-    def _remove_position(self, ticker: Ticker):
-        self.positions.pop(ticker)
 
     def update(self, ticker: Ticker, price: float):
         if ticker not in self.positions:
@@ -28,20 +25,16 @@ class Trader:
     def buy(self, ticker: Ticker, amount: float, price: float):
         if self.balance < price:
             raise ValueError("Insufficient balance")
-        if ticker not in self.positions:
-            self._add_position(ticker)
         self.positions[ticker].buy(amount, price)
         self.balance -= price
 
     def sell(self, ticker: Ticker, amount: float, price: float):
         if ticker not in self.positions:
-            return
+            raise ValueError("Position not found")
         if self.positions[ticker].amount < amount:
-            raise ValueError("Insufficient balance")
+            return
         self.positions[ticker].sell(amount)
         self.balance += price
-        if self.positions[ticker].amount == 0:
-            self._remove_position(ticker)
 
     def total_value(self):
         return self.balance + sum(p.value() for p in self.positions.values())

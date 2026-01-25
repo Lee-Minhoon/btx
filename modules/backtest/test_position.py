@@ -15,6 +15,8 @@ class TestPosition(unittest.TestCase):
         self.assertEqual(position.total_cost(), 0)
         self.assertEqual(position.value(), 0)
         self.assertEqual(position.roi(), 0)
+        self.assertEqual(position.buy_count, 1)
+        self.assertEqual(position.sell_count, 1)
         self.assertEqual(position.unrealized_profit, 0)
 
         position.buy(2, 100)
@@ -25,6 +27,8 @@ class TestPosition(unittest.TestCase):
         self.assertEqual(position.total_cost(), 100)
         self.assertEqual(position.value(), 110)
         self.assertEqual(position.roi(), 10)
+        self.assertEqual(position.buy_count, 2)
+        self.assertEqual(position.sell_count, 2)
         self.assertEqual(position.unrealized_profit, 20)
 
 
