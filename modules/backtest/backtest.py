@@ -49,10 +49,16 @@ class Backtest:
                     continue
                 row = df.loc[current_date].to_dict()
                 self.trader.update(ticker, row["Close"])
-                if row["signal"] == "BUY":
-                    self.trader.buy(ticker, 1, row["Close"])
-                elif row["signal"] == "SELL":
-                    self.trader.sell(ticker, 1, row["Close"])
+                strength = row["strength"]
+                match row["signal"]:
+                    case "BUY":
+                        self.trader.buy(ticker, strength * 100, row["Close"])
+                    case "SELL":
+                        self.trader.sell(ticker, strength * 100, row["Close"])
+                    case "HOLD":
+                        pass
+                    case _:
+                        pass
 
         rate = get_exchange_rate("USD", "KRW")
         days = (end_date - start_date).days
