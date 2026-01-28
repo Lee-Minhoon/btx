@@ -2,7 +2,7 @@ from datetime import date
 from pprint import pprint
 
 from modules.backtest import Backtest, Trader
-from modules.data.enum import Ticker
+from modules.data import Interval, Ticker, get_result
 from modules.utils import get_exchange_rate
 
 
@@ -17,6 +17,9 @@ def main():
     )
     result = backtest.run()
     pprint(result)
+
+    df = get_result(Ticker.MICROSOFT, Interval.DAY).to_df()
+    df.set_index("Date", inplace=True)
 
 
 if __name__ == "__main__":

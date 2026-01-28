@@ -23,12 +23,16 @@ class Trader:
         self.positions[ticker].update(price)
 
     def buy(self, ticker: Ticker, amount: float, price: float):
+        if amount == 0 or price == 0:
+            return
         if self.balance < price:
             raise ValueError("Insufficient balance")
         self.positions[ticker].buy(amount, price)
         self.balance -= price
 
     def sell(self, ticker: Ticker, amount: float, price: float):
+        if amount == 0 or price == 0:
+            return
         if ticker not in self.positions:
             raise ValueError("Position not found")
         if self.positions[ticker].amount < amount:

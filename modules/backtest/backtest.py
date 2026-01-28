@@ -23,6 +23,10 @@ class BacktestReport(TypedDict):
     per_ticker: dict[Ticker, PositionReport]
 
 
+def strength_to_amount(strength: float):
+    return strength * 100
+
+
 @dataclass
 class Backtest:
     trader: Trader
@@ -52,9 +56,13 @@ class Backtest:
                 strength = row["strength"]
                 match row["signal"]:
                     case "BUY":
-                        self.trader.buy(ticker, strength * 100, row["Close"])
+                        self.trader.buy(
+                            ticker, strength_to_amount(strength), row["Close"]
+                        )
                     case "SELL":
-                        self.trader.sell(ticker, strength * 100, row["Close"])
+                        self.trader.sell(
+                            ticker, strength_to_amount(strength), row["Close"]
+                        )
                     case "HOLD":
                         pass
                     case _:

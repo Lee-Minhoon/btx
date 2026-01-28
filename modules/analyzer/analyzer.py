@@ -3,7 +3,7 @@ from dataclasses import dataclass
 import pandas as pd
 from ta.momentum import RSIIndicator
 
-from modules.analyzer.stochastic import compute_stochastic
+from modules.analyzer.stochastic import StochasticOscillatorAnalyzer
 
 
 @dataclass
@@ -11,7 +11,8 @@ class Analyzer:
     df: pd.DataFrame
 
     def stochastic(self):
-        return self.df.join(compute_stochastic(self.df))
+        analyzer = StochasticOscillatorAnalyzer(self.df)
+        return self.df.join(analyzer.analyze())
 
     def rsi(self):
         rsi = RSIIndicator(

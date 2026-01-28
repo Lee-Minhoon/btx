@@ -4,74 +4,96 @@ from ta.momentum import StochasticOscillator
 from ta.trend import ADXIndicator
 
 
-def compute_stochastic(df: pd.DataFrame) -> pd.DataFrame:
-    stochastic = StochasticOscillator(
-        high=df["High"],
-        low=df["Low"],
-        close=df["Close"],
-    )
-    result = pd.DataFrame(index=df.index)
+class StochasticOscillatorAnalyzer:
+    df: pd.DataFrame
+    stochastic: StochasticOscillator
 
-    result["stoch_k"] = stochastic.stoch()
-    result["stoch_d"] = stochastic.stoch_signal()
+    def __init__(self, df: pd.DataFrame):
+        self.df = df.copy()
+        self.stochastic = StochasticOscillator(
+            high=df["High"],
+            low=df["Low"],
+            close=df["Close"],
+        )
+        self.df["stoch_k"] = self.stochastic.stoch()
+        self.df["stoch_d"] = self.stochastic.stoch_signal()
+        self.df["signal"] = "HOLD"
 
-    prev_k = result["stoch_k"].shift(1)
-    prev_d = result["stoch_d"].shift(1)
+    def oversold(self) -> pd.Series:
+        return self.df["stoch_k"] < 20
 
-    result["signal"] = "HOLD"
+    def overbought(self) -> pd.Series:
+        return self.df["stoch_k"] > 80
 
-    result.loc[
-        (prev_k <= prev_d)
-        & (result["stoch_k"] > result["stoch_d"])
-        & (result["stoch_k"] < 20),
-        "signal",
-    ] = "BUY"
+    def cross_up(self) -> pd.Series:
+        prev_k = self.df["stoch_k"].shift(1)
+        prev_d = self.df["stoch_d"].shift(1)
+        return (prev_k <= prev_d) & (self.df["stoch_k"] > self.df["stoch_d"])
 
-    result.loc[
-        (prev_k >= prev_d)
-        & (result["stoch_k"] < result["stoch_d"])
-        & (result["stoch_k"] > 80),
-        "signal",
-    ] = "SELL"
+    def cross_down(self) -> pd.Series:
+        prev_k = self.df["stoch_k"].shift(1)
+        prev_d = self.df["stoch_d"].shift(1)
+        return (prev_k >= prev_d) & (self.df["stoch_k"] < self.df["stoch_d"])
 
-    # ADX (추세 강도)
-    adx = ADXIndicator(
-        high=df["High"],
-        low=df["Low"],
-        close=df["Close"],
-    ).adx()
+    def adx(self) -> pd.Series:
+        return ADXIndicator(
+            high=self.df["High"],
+            low=self.df["Low"],
+            close=self.df["Close"],
+        ).adx()
 
-    # (1) K-D 거리
-    distance_weight = (result["stoch_k"] - result["stoch_d"]).abs() / 100
-    distance_weight = distance_weight.clip(0, 1)
+    # 모멘텀 거리 가중치 (0 ~ 1)
+    def distance_weight(self) -> pd.Series:
+        distance = (self.df["stoch_k"] - self.df["stoch_d"]).abs() / 100
+        return distance.clip(0, 1)
 
-    # (2) 구간 가중치
-    zone_weight = np.where(
-        result["signal"] == "BUY",
-        (20 - result["stoch_k"]) / 20,
-        np.where(
-            result["signal"] == "SELL",
-            (result["stoch_k"] - 80) / 20,
-            0,
-        ),
-    )
-    zone_weight = pd.Series(zone_weight, index=df.index).clip(0, 1)
+    # 구간 가중치 (0 ~ 1)
+    def zone_weight(self) -> pd.Series:
+        zone_weight = np.where(
+            self.df["signal"] == "BUY",
+            (20 - self.df["stoch_k"]) / 20,
+            np.where(
+                self.df["signal"] == "SELL",
+                (self.df["stoch_k"] - 80) / 20,
+                0,
+            ),
+        )
+        return pd.Series(zone_weight, index=self.df.index).clip(0, 1)
 
-    # (3) 기울기
-    slope_weight = (result["stoch_k"] - prev_k).abs() / 10
-    slope_weight = slope_weight.clip(0, 1)
+    # 기울기 가중치 (0 ~ 1)
+    def slope_weight(self) -> pd.Series:
+        prev_k = self.df["stoch_k"].shift(1)
+        slope_weight = (self.df["stoch_k"] - prev_k).abs() / 10
+        return slope_weight.clip(0, 1)
 
-    # (4) 추세 강도 (ADX)
-    trend_weight = (adx / 30).clip(0, 1)
+    # 추세 강도 가중치 (0 ~ 1)
+    def trend_weight(self) -> pd.Series:
+        trend_weight = self.adx() / 30
+        return trend_weight.clip(0, 1)
 
-    # 4️⃣ 최종 강도 조합
-    raw_strength = (
-        0.4 * distance_weight
-        + 0.3 * zone_weight
-        + 0.2 * slope_weight
-        + 0.1 * trend_weight
-    )
+    def analyze(self) -> pd.DataFrame:
+        trend_weight = self.trend_weight()
 
-    result["strength"] = raw_strength.clip(0, 1)
+        # 강한 추세장일 때는 신호를 무시
+        self.df.loc[
+            self.cross_up() & self.oversold() & (trend_weight < 0.7),
+            "signal",
+        ] = "BUY"
 
-    return result[["stoch_k", "stoch_d", "signal", "strength"]]
+        # 강한 추세장일 때는 신호를 무시
+        self.df.loc[
+            self.cross_down() & self.overbought() & (trend_weight < 0.7),
+            "signal",
+        ] = "SELL"
+
+        # 4️⃣ 최종 강도 조합
+        raw_strength = (
+            0.4 * self.distance_weight()
+            + 0.3 * self.zone_weight()
+            + 0.2 * self.slope_weight()
+            + 0.1 * (1 - trend_weight)
+        )
+
+        self.df["strength"] = raw_strength.clip(0, 1)
+
+        return self.df[["stoch_k", "stoch_d", "signal", "strength"]]

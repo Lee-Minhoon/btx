@@ -1,3 +1,3 @@
-from .stochastic import compute_stochastic
+from .stochastic import StochasticOscillatorAnalyzer
 
-__all__ = ["compute_stochastic"]
+__all__ = ["StochasticOscillatorAnalyzer"]
